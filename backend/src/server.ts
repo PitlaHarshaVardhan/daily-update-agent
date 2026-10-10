@@ -28,13 +28,14 @@ import { readStore, writeStore } from './store'
 const app = express()
 
 app.use(helmet())
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || config.allowedOrigins.includes(origin)) return callback(null, true)
-    return callback(new Error('Origin is not allowed by CORS.'))
-  },
-  credentials: true,
-}))
+app.use(
+  cors({
+    origin: config.allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  }),
+)
 app.use(express.json({ limit: '1mb' }))
 app.use(morgan('combined'))
 
