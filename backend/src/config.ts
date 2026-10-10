@@ -16,12 +16,17 @@ if (isProduction && (!jwtSecret || jwtSecret === 'demo-local-secret-change-me' |
   throw new Error('Set a unique JWT_SECRET before starting the backend in production.')
 }
 
+const allowedOrigins = [...new Set([
+  'https://daily-update-agent.vercel.app',
+  ...(process.env.FRONTEND_URL ?? 'http://localhost:5173').split(',').map((origin) => origin.trim()).filter(Boolean),
+])]
+
 export const config = {
   port: Number(process.env.PORT ?? 4000),
   jwtSecret: jwtSecret || 'demo-local-secret-change-me',
   mongoUri: process.env.MONGODB_URI ?? '',
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
-  allowedOrigins: (process.env.FRONTEND_URL ?? 'http://localhost:5173').split(',').map((origin) => origin.trim()).filter(Boolean),
+  allowedOrigins,
   appName: process.env.APP_NAME ?? 'Daily Intelligence Platform',
   isProduction,
   aiProvider: process.env.AI_PROVIDER ?? 'demo',
