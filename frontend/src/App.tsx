@@ -3,7 +3,7 @@ import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import axios from 'axios'
 import './App.css'
 
-const API_URL = import.meta.env.VITE_API_URL ?? '/api'
+const API_URL = `${(import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '').replace(/\/api$/, '')}/api`
 
 function getSimpleInvestmentView(signal: string) {
   if (signal === 'BULLISH_MOMENTUM') {
