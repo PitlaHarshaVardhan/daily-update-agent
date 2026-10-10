@@ -70,14 +70,15 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 async function buildDailyDigest() {
   const store = readStore()
   const [liveNews, liveMarket] = await Promise.all([fetchNewsFromApi(), fetchMarketFromApi()])
-  const stories = rankStories(deduplicateArticles(liveNews.articles.length ? liveNews.articles : store.news))
+  const newsArticles = liveNews.articles.length || config.isProduction ? liveNews.articles : store.news
+  const stories = rankStories(deduplicateArticles(newsArticles))
   const analysis = await getDailyMarketIntelligence(store.watchlist ?? [], liveNews.articles)
-  const marketSnapshots = liveMarket.snapshots.length ? liveMarket.snapshots : store.marketSnapshots
+  const marketSnapshots = liveMarket.snapshots.length || config.isProduction ? liveMarket.snapshots : store.marketSnapshots
   const briefingData = {
     generatedAt: analysis.generatedAt,
-    newsSource: liveNews.articles.length ? liveNews.source : 'demo-news',
+    newsSource: liveNews.articles.length || config.isProduction ? liveNews.source : 'demo-news',
     stories,
-    marketSource: liveMarket.snapshots.length ? liveMarket.source : 'demo-market fallback',
+    marketSource: liveMarket.snapshots.length || config.isProduction ? liveMarket.source : 'demo-market fallback',
     marketSnapshots,
     watchlist: analysis.watchlist,
     topStocks: analysis.topStocks,
@@ -119,7 +120,10 @@ app.get('/api/health', async (_req, res) => {
       timestamp: new Date().toISOString(),
       dailySchedule: { cron: config.dailyReportCron, timezone: config.schedulerTimezone },
       providers: {
-        news: config.newsEnabled ? 'configured' : 'demo',
+        news: config.newsEnabled ? 'newsapi' : 'google-news-rss',
+        market: process.env.MARKET_DATA_PROVIDER?.trim().toLowerCase() === 'alphavantage' && process.env.MARKET_DATA_API_KEY
+          ? 'alphavantage with Yahoo Finance fallback'
+          : 'yahoo-finance',
         ai: config.aiEnabled ? 'configured' : 'demo',
         mongo: mongoStatus.status,
         email: process.env.SMTP_USER ? 'configured' : 'demo',
@@ -174,11 +178,20 @@ app.post('/api/auth/login', async (req, res) => {
   return res.json({ success: true, data: { token: createToken(email), user: { id: user.id, email } } })
 })
 
+function getNextScheduledRun() {
+  const indiaOffsetMs = 5.5 * 60 * 60 * 1000
+  const nowIndia = new Date(Date.now() + indiaOffsetMs)
+  const nextRunIndia = new Date(nowIndia)
+  nextRunIndia.setUTCHours(6, 0, 0, 0)
+  if (nextRunIndia <= nowIndia) nextRunIndia.setUTCDate(nextRunIndia.getUTCDate() + 1)
+  return new Date(nextRunIndia.getTime() - indiaOffsetMs).toISOString()
+}
+
 app.get('/api/dashboard', requireAuth, (_req, res) => {
   const store = readStore()
   const dashboardData = {
     lastReport: store.reports.length ? store.reports[store.reports.length - 1].generatedAt : new Date().toISOString(),
-    nextScheduledRun: '2026-10-10T07:00:00+05:30',
+    nextScheduledRun: getNextScheduledRun(),
     newStories: store.news.length,
     sourceHealth: 'stable',
     marketFreshness: 'live',
@@ -192,11 +205,11 @@ app.get('/api/dashboard', requireAuth, (_req, res) => {
 app.get('/api/news', async (_req, res) => {
   const live = await fetchNewsFromApi()
   const storeArticles = readStore().news
-  const articles = rankStories(deduplicateArticles(live.articles.length ? live.articles : storeArticles))
+  const articles = rankStories(deduplicateArticles(live.articles.length || config.isProduction ? live.articles : storeArticles))
   res.json({
     success: true,
     data: articles.slice(0, 20),
-    source: live.articles.length ? live.source : 'demo-news',
+    source: live.articles.length || config.isProduction ? live.source : 'demo-news',
     counts: {
       hyderabad: articles.filter((article) => article.category === 'hyderabad').length,
       telangana: articles.filter((article) => article.category === 'telangana').length,
@@ -207,9 +220,9 @@ app.get('/api/news', async (_req, res) => {
 
 app.get('/api/market', async (_req, res) => {
   const live = await fetchMarketFromApi()
-  const snapshots = live.snapshots.length ? live.snapshots : readStore().marketSnapshots
+  const snapshots = live.snapshots.length || config.isProduction ? live.snapshots : readStore().marketSnapshots
   const market = snapshots.map(normalizeMarketSnapshot)
-  res.json({ success: true, data: market, source: live.source })
+  res.json({ success: true, data: market, source: live.snapshots.length || config.isProduction ? live.source : 'demo-market' })
 })
 
 app.get('/api/stock-of-day', async (_req, res) => {
@@ -247,9 +260,9 @@ app.post('/api/reports/generate', requireAuth, async (req, res) => {
   const input = req.body ?? {}
   const baseStories = readStore().news
   const liveNews = await fetchNewsFromApi()
-  const stories = rankStories(deduplicateArticles(liveNews.articles.length ? liveNews.articles : baseStories))
+  const stories = rankStories(deduplicateArticles(liveNews.articles.length || config.isProduction ? liveNews.articles : baseStories))
   const liveMarket = await fetchMarketFromApi()
-  const marketSnapshots = liveMarket.snapshots.length ? liveMarket.snapshots : readStore().marketSnapshots
+  const marketSnapshots = liveMarket.snapshots.length || config.isProduction ? liveMarket.snapshots : readStore().marketSnapshots
   const sections = input.sections ?? {
     hyderabad: stories.filter((entry) => entry.category === 'hyderabad'),
     telangana: stories.filter((entry) => entry.category === 'telangana'),
@@ -270,8 +283,8 @@ app.post('/api/reports/generate', requireAuth, async (req, res) => {
       ...report,
       aiSummary,
       providerSources: {
-        news: liveNews.articles.length ? liveNews.source : 'demo-news',
-        market: liveMarket.source,
+        news: liveNews.articles.length || config.isProduction ? liveNews.source : 'demo-news',
+        market: liveMarket.snapshots.length || config.isProduction ? liveMarket.source : 'demo-market',
       },
     },
   })

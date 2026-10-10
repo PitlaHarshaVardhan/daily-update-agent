@@ -25,7 +25,7 @@ This repository contains a daily intelligence platform for Hyderabad, Telangana,
 
 ## Environment variables
 Copy the placeholders from `.env.example` to a local `.env` file in the project root.
-Set `DAILY_REPORT_CRON` (default `0 7 * * *`) and `SCHEDULER_TIMEZONE` (default `Asia/Kolkata`) to control the daily digest schedule.
+The daily digest is scheduled for 6:00 AM Asia/Kolkata time.
 In production, set `NODE_ENV=production`, a unique strong `JWT_SECRET`, and `FRONTEND_URL` to the public site origin. The backend refuses to start in production with a placeholder JWT secret.
 
 ## MongoDB setup
@@ -43,8 +43,8 @@ In production, set `NODE_ENV=production`, a unique strong `JWT_SECRET`, and `FRO
 
 ## AI and market providers
 - `AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`: Gemini-backed report summaries
-- `NEWS_API_KEY`: regional NewsAPI searches
-- `MARKET_DATA_PROVIDER`, `MARKET_DATA_API_KEY`: Alpha Vantage market snapshots
+- `NEWS_API_KEY`: regional NewsAPI searches (Google News RSS is used when unset or unavailable)
+- `MARKET_DATA_PROVIDER`, `MARKET_DATA_API_KEY`: optional Alpha Vantage market snapshots (Yahoo Finance is used when unset or unavailable)
 - Lalithaa Jewellery Mart uses Yahoo Finance symbol `LALITHAA.NS`; UTI Nifty 50 Direct Growth uses AMFI scheme code `120716` via MFAPI.in.
 
 ## Deployment

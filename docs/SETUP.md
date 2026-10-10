@@ -38,6 +38,6 @@ cd backend
 npm start
 ```
 
-The backend scheduler runs in the configured timezone. Run a single backend instance unless a distributed scheduler/lock is configured.
+The backend scheduler sends the daily briefing at 6:00 AM Asia/Kolkata time. Run a single backend instance unless a distributed scheduler/lock is configured.
 
 The production backend serves `frontend/dist` automatically when it exists. Set `NODE_ENV=production`, a unique `JWT_SECRET`, and `FRONTEND_URL` to the deployed origin before `npm start`. `PORT` is supplied by most hosting platforms.

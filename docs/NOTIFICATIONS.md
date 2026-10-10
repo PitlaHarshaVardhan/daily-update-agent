@@ -1,6 +1,6 @@
 # Notifications and delivery
 
-The Settings page can test each channel and manually send a daily briefing. The backend also schedules a daily briefing using `DAILY_REPORT_CRON` and `SCHEDULER_TIMEZONE` (default `0 7 * * *`, `Asia/Kolkata`).
+The Settings page can test each channel and manually send a daily briefing. The backend automatically sends the daily briefing at 6:00 AM Asia/Kolkata time. Test and manual sends remain user-triggered.
 
 ## Email
 - Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` in the ignored local `.env`. Optional `SMTP_TO` sets the digest recipient; it defaults to `SMTP_USER`.
